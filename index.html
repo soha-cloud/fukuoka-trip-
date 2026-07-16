@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>후쿠오카 여행 스케줄표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F2EC; --card:#ffffff; --navy:#173A5E; --line:#e6e2d8; --text:#2b2b2b; --muted:#8a8577;
+    --plan-bg:#EFE7FC; --plan-fg:#6D4FB0;
+    --food-bg:#FFEAD9; --food-fg:#B85C1E;
+    --move-bg:#DDEBFB; --move-fg:#25619E;
+    --rest-bg:#DFF2E3; --rest-fg:#2C7A4B;
+    --hour-h:58px; /* 시간 1칸 높이 */
+    --col-w:210px;  /* DAY 컬럼 너비 */
+    --axis-w:46px;  /* 시간축 너비 */
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--bg);color:var(--text);padding-bottom:80px;}
+  a{color:inherit;}
+  .wrap{max-width:1100px;margin:0 auto;padding:14px 12px 0;}
+
+  /* ===== 상단 티켓 헤더 ===== */
+  .ticket{background:var(--navy);color:#fff;border-radius:18px;padding:16px 18px;position:relative;box-shadow:0 6px 18px rgba(23,58,94,.22);}
+  .ticket h1{margin:0 0 2px;font-size:19px;font-weight:700;letter-spacing:-.3px;}
+  .ticket .sub{font-size:12.5px;opacity:.85;margin-bottom:12px;}
+  .tk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  .tk-item{background:rgba(255,255,255,.09);border-radius:12px;padding:9px 11px;cursor:pointer;transition:.15s;}
+  .tk-item:active{transform:scale(.98);}
+  .tk-item .lb{font-size:10.5px;opacity:.7;letter-spacing:.5px;margin-bottom:3px;}
+  .tk-item .val{font-size:13.5px;font-weight:600;line-height:1.35;}
+  .tk-item.full{grid-column:1 / -1;}
+  .edit-hint{font-size:10px;opacity:.55;margin-top:9px;text-align:right;}
+
+  /* ===== 툴바 ===== */
+  .toolbar{display:flex;gap:8px;align-items:center;margin:14px 2px 10px;flex-wrap:wrap;}
+  .btn{border:none;background:var(--card);color:var(--navy);border:1px solid var(--line);
+    border-radius:999px;padding:9px 15px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:.15s;}
+  .btn:active{transform:scale(.96);}
+  .btn.primary{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .btn.ghost{background:transparent;}
+  .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px;}
+  .seg button{border:none;background:transparent;padding:7px 15px;border-radius:999px;font-size:13px;font-weight:600;font-family:inherit;color:var(--muted);cursor:pointer;}
+  .seg button.on{background:var(--navy);color:#fff;}
+  .spacer{flex:1;}
+
+  /* 카테고리 범례 */
+  .legend{display:flex;gap:6px;flex-wrap:wrap;margin:0 2px 10px;}
+  .lg{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);}
+  .dot{width:11px;height:11px;border-radius:4px;}
+
+  /* ===== 타임라인 그리드 ===== */
+  .grid-scroll{overflow-x:auto;overflow-y:hidden;border-radius:16px;background:var(--card);border:1px solid var(--line);-webkit-overflow-scrolling:touch;}
+  .grid-inner{position:relative;}
+  .day-head{display:flex;position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);}
+  .day-head .corner{width:var(--axis-w);flex:none;border-right:1px solid var(--line);}
+  .day-head .dh{width:var(--col-w);flex:none;text-align:center;padding:10px 4px;border-right:1px solid var(--line);}
+  .day-head .dh:last-child{border-right:none;}
+  .day-head .dh .d1{font-size:13px;font-weight:700;color:var(--navy);}
+  .day-head .dh .d2{font-size:11px;color:var(--muted);margin-top:1px;}
+
+  .grid-body{display:flex;position:relative;}
+  .axis{width:var(--axis-w);flex:none;border-right:1px solid var(--line);position:relative;}
+  .axis .hr{height:var(--hour-h);position:relative;}
+  .axis .hr span{position:absolute;top:-8px;right:5px;font-size:10.5px;color:var(--muted);}
+  .col{width:var(--col-w);flex:none;border-right:1px solid var(--line);position:relative;}
+  .col:last-child{border-right:none;}
+  .col .hline{height:var(--hour-h);border-bottom:1px dashed #efece3;}
+  .addcell{position:absolute;left:0;right:0;cursor:pointer;}
+  .addcell:active{background:rgba(23,58,94,.05);}
+
+  .block{position:absolute;left:5px;right:5px;border-radius:10px;padding:6px 8px;overflow:hidden;cursor:pointer;
+    border-left:4px solid;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:.12s;}
+  .block:active{transform:scale(.985);}
+  .block .bt{font-size:12.5px;font-weight:600;line-height:1.25;}
+  .block .btime{font-size:10.5px;opacity:.85;margin-bottom:1px;}
+  .block .bmemo{font-size:10.5px;opacity:.8;margin-top:2px;line-height:1.3;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .block .bmap{display:inline-block;margin-top:3px;font-size:10px;font-weight:600;text-decoration:none;
+    background:rgba(255,255,255,.65);padding:2px 7px;border-radius:999px;}
+  .cat-plan{background:var(--plan-bg);border-color:var(--plan-fg);color:var(--plan-fg);}
+  .cat-food{background:var(--food-bg);border-color:var(--food-fg);color:var(--food-fg);}
+  .cat-move{background:var(--move-bg);border-color:var(--move-fg);color:var(--move-fg);}
+  .cat-rest{background:var(--rest-bg);border-color:var(--rest-fg);color:var(--rest-fg);}
+
+  /* ===== 리스트 뷰 ===== */
+  .listview{display:none;}
+  .day-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 14px 6px;margin-bottom:14px;}
+  .day-card h3{margin:0 0 10px;font-size:15px;color:var(--navy);display:flex;align-items:center;gap:8px;}
+  .day-card h3 .badge{font-size:11px;background:var(--bg);color:var(--muted);padding:3px 9px;border-radius:999px;font-weight:600;}
+  .litem{display:flex;gap:10px;padding:9px 0;border-top:1px solid #f0ede4;cursor:pointer;}
+  .litem:first-of-type{border-top:none;}
+  .litem .lt{font-size:12px;font-weight:700;color:var(--muted);width:78px;flex:none;padding-top:2px;}
+  .litem .lc{flex:1;}
+  .litem .ltag{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:middle;}
+  .litem .ltitle{font-size:14px;font-weight:600;}
+  .litem .lmemo{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4;}
+  .litem .lmap{display:inline-block;margin-top:5px;font-size:11px;font-weight:600;text-decoration:none;color:var(--move-fg);
+    background:var(--move-bg);padding:3px 9px;border-radius:999px;}
+
+  /* ===== 모달(팝업창) ===== */
+  .overlay{position:fixed;inset:0;background:rgba(20,25,35,.45);z-index:50;display:none;align-items:flex-end;justify-content:center;}
+  .overlay.on{display:flex;}
+  .sheet{background:var(--card);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+    max-height:88vh;overflow-y:auto;animation:up .22s ease;}
+  @keyframes up{from{transform:translateY(30px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .sheet h2{margin:2px 0 14px;font-size:17px;color:var(--navy);}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;}
+  .field input,.field select,.field textarea{width:100%;font-family:inherit;font-size:14.5px;padding:11px 12px;
+    border:1px solid var(--line);border-radius:11px;background:#fbfaf6;color:var(--text);}
+  .field textarea{min-height:66px;resize:vertical;}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .cat-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .cat-pick button{border:2px solid transparent;border-radius:11px;padding:10px 4px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+  .cat-pick button.sel{outline:2px solid var(--navy);outline-offset:1px;}
+  .sheet-actions{display:flex;gap:9px;margin-top:8px;}
+  .sheet-actions .btn{flex:1;text-align:center;padding:13px;}
+  .btn.danger{background:#fdecec;color:#c0392b;border-color:#f6d5d5;}
+  .btn.wide{width:100%;text-align:center;padding:13px;margin-top:4px;}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;
+    padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:80;opacity:0;transition:.25s;pointer-events:none;}
+  .toast.show{opacity:1;}
+
+  @media(max-width:430px){
+    :root{--col-w:172px;}
+    .ticket h1{font-size:17px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 티켓형 헤더 -->
+  <div class="ticket">
+    <h1 id="tkTitle">후쿠오카 여행 스케줄표</h1>
+    <div class="sub" id="tkSub">2026.07.17(금) ~ 07.20(월) · 3박 4일</div>
+    <div class="tk-grid">
+      <div class="tk-item full" data-edit="hotel"><div class="lb">🏨 숙소 HOTEL</div><div class="val" id="tkHotel"></div></div>
+      <div class="tk-item" data-edit="flightOut"><div class="lb">🛫 가는 편</div><div class="val" id="tkOut"></div></div>
+      <div class="tk-item" data-edit="flightIn"><div class="lb">🛬 오는 편</div><div class="val" id="tkIn"></div></div>
+    </div>
+    <div class="edit-hint">티켓 항목을 탭하면 수정할 수 있어요 ✎</div>
+  </div>
+
+  <!-- 툴바 -->
+  <div class="toolbar">
+    <div class="seg">
+      <button id="segGrid" class="on" onclick="setView('grid')">타임라인</button>
+      <button id="segList" onclick="setView('list')">리스트</button>
+      <button id="segShop" onclick="setView('shop')">🛍️ 쇼핑</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="openSettings()">⚙︎ 설정</button>
+    <button class="btn ghost" onclick="resetAll()">↺ 초기화</button>
+  </div>
+
+  <div class="legend" id="legend">
+    <span class="lg"><span class="dot" style="background:var(--plan-fg)"></span>일정</span>
+    <span class="lg"><span class="dot" style="background:var(--food-fg)"></span>식사</span>
+    <span class="lg"><span class="dot" style="background:var(--move-fg)"></span>이동</span>
+    <span class="lg"><span class="dot" style="background:var(--rest-fg)"></span>휴식</span>
+  </div>
+
+  <!-- 타임라인 그리드 -->
+  <div class="grid-scroll" id="gridView">
+    <div class="grid-inner">
+      <div class="day-head" id="dayHead"></div>
+      <div class="grid-body" id="gridBody"></div>
+    </div>
+  </div>
+
+  <!-- 리스트 뷰 -->
+  <div class="listview" id="listView"></div>
+
+  <!-- 쇼핑 가이드 뷰 -->
+  <style>
+  .shopview{display:none;}
+  .sg-tip{background:#fffbe6;border:1px solid #ffe58f;border-radius:14px;padding:13px 15px;margin-bottom:16px;font-size:13.5px;}
+  .sg-tip.fix{background:#eef6ff;border-color:#b6d8ff;}
+  .sg-tip h3{font-size:14px;margin:0 0 7px;color:var(--navy);}
+  .sg-tip ul{margin:0;padding-left:18px;}
+  .sg-tip li{margin-bottom:5px;line-height:1.45;}
+  .sg-tip b{color:var(--food-fg);}
+  .sg-zone{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:16px;overflow:hidden;}
+  .sg-head{padding:12px 15px;color:#fff;}
+  .sg-head h2{margin:0;font-size:16px;font-weight:700;}
+  .sg-head .sub{font-size:12px;opacity:.92;margin-top:2px;}
+  .sg-d1 .sg-head{background:var(--plan-fg);}
+  .sg-d2 .sg-head{background:var(--food-fg);}
+  .sg-d3 .sg-head{background:var(--move-fg);}
+  .sg-d4 .sg-head{background:#78909c;}
+  .sg-kw .sg-head{background:var(--rest-fg);}
+  .sg-body{padding:11px 13px 14px;}
+  .sg-bld{border:1px solid var(--line);border-radius:12px;margin-top:11px;}
+  .sg-bld:first-child{margin-top:0;}
+  .sg-bname{font-weight:700;font-size:14px;padding:9px 12px;background:#fafbfc;border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;}
+  .sg-bname small{font-weight:500;color:#8a8a8a;}
+  .sg-floor{display:flex;padding:8px 12px;border-bottom:1px dashed #eef0f2;gap:10px;}
+  .sg-floor:last-child{border-bottom:none;}
+  .sg-fl{flex:0 0 58px;font-weight:700;font-size:11.5px;color:#444;background:#f0f2f5;border-radius:6px;text-align:center;padding:3px 2px;height:fit-content;}
+  .sg-items{flex:1;font-size:13.5px;line-height:1.45;}
+  .sg-items b{color:var(--food-fg);}
+  .sg-note{font-size:11.5px;color:#888;margin-top:3px;}
+  .sg-head,.sg-bname,.sg-floor,.sg-tip{cursor:pointer;}
+  .sg-ed{color:#c9c0b0;font-size:11px;}
+  .sg-addrow{justify-content:center;color:var(--navy);font-weight:600;font-size:12.5px;background:#fbfaf6;}
+  .sg-addrow:active{background:#f0ede4;}
+  .sg-addbld{display:block;width:100%;margin-top:11px;border:1px dashed var(--line);background:transparent;color:var(--navy);font-family:inherit;font-weight:600;font-size:13px;padding:10px;border-radius:12px;cursor:pointer;}
+  .sg-addbld:active{background:#f4f2ec;}
+  </style>
+  <div class="shopview" id="shopView">
+
+    <div class="sg-tip">
+      <h3>⏱️ 시간 안 버리는 4원칙</h3>
+      <ul>
+        <li><b>돈키호테는 1일차 밤 나카스점에서 몰아서</b> — 3일차 텐진 돈키는 그때 못 산 것만. 두 번 겹치지 말기.</li>
+        <li><b>러쉬는 아뮤에스트 1층 한 곳에서</b> — 2일차 하카타 쇼핑 때 5,500엔↑ 몰아 사고 면세. 텐진 파르코는 예비.</li>
+        <li><b>온러닝은 캐널시티 알펜 2층</b> — 서일본 최대 스포츠매장, On 물량 제일 많음. 3일차 확정.</li>
+        <li><b>칼디·다이소는 텐진에서</b> 한 번에. 아이나가라는 돈키 아니라 <b>아뮤 핸즈 5층</b>.</li>
+      </ul>
+    </div>
+
+    <section class="sg-zone sg-d1">
+      <div class="sg-head"><h2>DAY 1 · 7/17(금) 밤</h2><div class="sub">23:00 돈키호테 나카스점 (가볍게)</div></div>
+      <div class="sg-body">
+        <div class="sg-bld">
+          <div class="sg-bname">돈키호테 나카스점 <small>24시간 · 나카스카와바타역 인근 · 숙소 도보 10분</small></div>
+          <div class="sg-floor"><div class="sg-fl">밤</div><div class="sg-items">가벼운 소모품 먼저: <b>산테 안약</b> · <b>비오레</b>(입욕제·데오드란트) · 아이 간식<div class="sg-note">여기서 미리 털면 3일차 텐진 돈키 부담↓ · 면세 5,500엔↑·여권 지참</div></div></div>
+          <div class="sg-floor"><div class="sg-fl">보류</div><div class="sg-items">부피 큰 소모품은 마지막(3일차 텐진 돈키)로<div class="sg-note">여행 내내 안 들고 다니게</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-zone sg-d2">
+      <div class="sg-head"><h2>DAY 2 · 7/18(토)</h2><div class="sub">하카타역 쇼핑(11:50~14:00) → 라라포트</div></div>
+      <div class="sg-body">
+        <div class="sg-bld">
+          <div class="sg-bname">아뮤플라자 하카타 <small>JR하카타역 직결</small></div>
+          <div class="sg-floor"><div class="sg-fl">B1</div><div class="sg-items">지하 식품관 → 주방 <b>집게·칼·나무젓가락</b> · <b>시오콘부</b></div></div>
+          <div class="sg-floor"><div class="sg-fl">5F</div><div class="sg-items">도큐핸즈 → <b>문구류</b> + <b>아이나가라 눈마사지기</b><div class="sg-note">아이나가라는 핸즈 선행발매(돈키 없음) · 재고 전화확인 추천</div></div></div>
+        </div>
+        <div class="sg-bld">
+          <div class="sg-bname">아뮤에스트 <small>아뮤플라자 옆 · 하카타역 직결</small></div>
+          <div class="sg-floor"><div class="sg-fl">1F</div><div class="sg-items">⭐ <b>러쉬</b>(직영·면세 O) — 마사지바 트루로맨스<div class="sg-note">여기서 5,500엔↑ 몰아 사면 러쉬 끝 · 텐진보다 덜 붐빔</div></div></div>
+        </div>
+        <div class="sg-bld">
+          <div class="sg-bname">라라포트 후쿠오카 <small>오후 · 가족·아이 위주</small></div>
+          <div class="sg-floor"><div class="sg-fl">4F</div><div class="sg-items">건담파크 · 실물대 ν건담(19시 라이트쇼)</div></div>
+          <div class="sg-floor"><div class="sg-fl">관내</div><div class="sg-items">무인양품 · 레고 · 유니클로 · 자라 · ABC마트<div class="sg-note">쇼핑리스트 핵심템은 여기 없음 — 아이·가족 쇼핑</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-zone sg-d3">
+      <div class="sg-head"><h2>DAY 3 · 7/19(일)</h2><div class="sub">텐진(10:00~) → 캐널시티(14:15~)</div></div>
+      <div class="sg-body">
+        <div class="sg-bld">
+          <div class="sg-bname">텐진 지하상가 <small>지하로 다 연결</small></div>
+          <div class="sg-floor"><div class="sg-fl">B1</div><div class="sg-items">이모야켄지로(고구마튀김) · <b>칼디</b>(커피·시오콘부·간식) · 주방용품 상가 · 인큐브(몬치치) · 유니클로 · <b>다이소</b><div class="sg-note">칼디·다이소는 여기서 몰아서</div></div></div>
+        </div>
+        <div class="sg-bld">
+          <div class="sg-bname">라시크 LACHIC <small>니시테츠 텐진역 인근</small></div>
+          <div class="sg-floor"><div class="sg-fl">9F</div><div class="sg-items">스탠다드 프로덕트 → <b>보냉백</b><div class="sg-note">부피 큼 — 정말 필요할 때만</div></div></div>
+        </div>
+        <div class="sg-bld">
+          <div class="sg-bname">파르코 / 텐진 돈키호테</div>
+          <div class="sg-floor"><div class="sg-fl">파르코 5F</div><div class="sg-items">러쉬 (하카타서 못 샀을 때 예비)</div></div>
+          <div class="sg-floor"><div class="sg-fl">돈키</div><div class="sg-items">1일차 나카스서 <b>못 산 것만</b><div class="sg-note">중복 방문 최소화</div></div></div>
+        </div>
+        <div class="sg-bld">
+          <div class="sg-bname">캐널시티 하카타 <small>텐진에서 버스·지하철 약 10분</small></div>
+          <div class="sg-floor"><div class="sg-fl">알펜 2F</div><div class="sg-items">스포츠데포(Alpen) → <b>온러닝(On)</b><div class="sg-note">서일본 최대·On 물량 최다 · 2층 러닝코너</div></div></div>
+          <div class="sg-floor"><div class="sg-fl">S1F</div><div class="sg-items">건담베이스 후쿠오카</div></div>
+          <div class="sg-floor"><div class="sg-fl">B1</div><div class="sg-items">점프샵 · 반다이남코(가챠)<div class="sg-note">아이들 구경</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-zone sg-d4">
+      <div class="sg-head"><h2>DAY 4 · 7/20(월) 출국</h2><div class="sub">10:00 공항 면세가 마지막 기회</div></div>
+      <div class="sg-body">
+        <div class="sg-bld">
+          <div class="sg-bname">후쿠오카공항 <small>출발 12:30 · 2시간 전 수속</small></div>
+          <div class="sg-floor"><div class="sg-fl">면세</div><div class="sg-items">깜빡한 간식·화장품 마지막 픽업<div class="sg-note">부피 큰 쇼핑은 전날 마무리 권장</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-zone sg-kw">
+      <div class="sg-head"><h2>🍳 일본 주방용품 더 볼 곳 (선택)</h2><div class="sub">3일차 텐진 동선에서 살짝</div></div>
+      <div class="sg-body">
+        <div class="sg-bld">
+          <div class="sg-bname">B.B.B POTTERS <small>텐진 도보 10~15분 / 야쿠인</small></div>
+          <div class="sg-floor"><div class="sg-fl">추천</div><div class="sg-items">⭐ 후쿠오카 대표 <b>감성 주방·생활잡화 편집숍</b><div class="sg-note">예쁜 나무주걱·조리도구·그릇 · 가벼운 소품 위주</div></div></div>
+        </div>
+        <div class="sg-bld">
+          <div class="sg-bname">다이마루 후쿠오카 텐진점</div>
+          <div class="sg-floor"><div class="sg-fl">본관 6F</div><div class="sg-items">냄비·프라이팬·<b>식칼</b>·유명 키친 브랜드<div class="sg-note">백화점 면세 O · 식칼은 위탁수하물</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="sg-tip fix">
+      <h3>⚖️ 무겁고 가격차 작은 건 패스</h3>
+      <ul>
+        <li>🔴 <b>패스 후보</b> — 보냉백(한국 다이소도 비슷) · 저가 주방칼·집게</li>
+        <li>🟢 <b>값어치 O</b> — 러쉬(한국 대비 ~반값) · 산테 안약(초경량) · 비오레 · 아이나가라(일본한정) · 핸즈 문구 · 칼디 식품 · 온러닝(살 거면 알펜)</li>
+      </ul>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- 일정 추가/수정 모달 -->
+<div class="overlay" id="blockOverlay">
+  <div class="sheet">
+    <h2 id="blockTitle">일정 추가</h2>
+    <div class="field">
+      <label>제목</label>
+      <input id="fTitle" type="text" placeholder="예: 미야지다케 신사 라이트업">
+    </div>
+    <div class="row2">
+      <div class="field"><label>시작</label><input id="fStart" type="time"></div>
+      <div class="field"><label>종료</label><input id="fEnd" type="time"></div>
+    </div>
+    <div class="field">
+      <label>카테고리</label>
+      <div class="cat-pick" id="catPick">
+        <button data-cat="plan" class="cat-plan">일정</button>
+        <button data-cat="food" class="cat-food">식사</button>
+        <button data-cat="move" class="cat-move">이동</button>
+        <button data-cat="rest" class="cat-rest">휴식</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>메모 (식당 후보·팁 등)</label>
+      <textarea id="fMemo" placeholder="예: 1순위 웨이팅 시 2순위 ○○"></textarea>
+    </div>
+    <div class="field">
+      <label>구글맵 링크 (선택)</label>
+      <input id="fMap" type="text" placeholder="https://maps.google.com/...">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn danger" id="btnDelete" onclick="deleteBlock()">삭제</button>
+      <button class="btn ghost" onclick="closeOverlay('blockOverlay')">취소</button>
+      <button class="btn primary" onclick="saveBlock()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 티켓 수정 모달 -->
+<div class="overlay" id="ticketOverlay">
+  <div class="sheet">
+    <h2 id="ticketH">항목 수정</h2>
+    <div class="field"><label id="ticketLabel">값</label><input id="ticketInput" type="text"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeOverlay('ticketOverlay')">취소</button>
+      <button class="btn primary" onclick="saveTicket()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 여행 설정 모달 -->
+<div class="overlay" id="settingsOverlay">
+  <div class="sheet">
+    <h2>여행 설정</h2>
+    <div class="field"><label>여행 제목</label><input id="sTitle" type="text"></div>
+    <div class="row2">
+      <div class="field"><label>시작일</label><input id="sDate" type="date"></div>
+      <div class="field"><label>일수</label><input id="sDays" type="number" min="1" max="10"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>표시 시작 시간</label><input id="sStart" type="number" min="0" max="23"></div>
+      <div class="field"><label>표시 종료 시간</label><input id="sEnd" type="number" min="1" max="24"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeOverlay('settingsOverlay')">취소</button>
+      <button class="btn primary" onclick="saveSettings()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 쇼핑: 항목 모달 -->
+<div class="overlay" id="shopItemOverlay">
+  <div class="sheet">
+    <h2 id="shopItemTitle">항목 추가</h2>
+    <div class="field"><label>층 / 위치</label><input id="siFl" type="text" placeholder="예: 5F, B1, 면세"></div>
+    <div class="field"><label>항목 (강조는 **텍스트**)</label><textarea id="siItems" placeholder="예: 도큐핸즈 → **문구류**"></textarea></div>
+    <div class="field"><label>메모 (선택)</label><textarea id="siNote" placeholder="팁·주의사항"></textarea></div>
+    <div class="sheet-actions">
+      <button class="btn danger" id="siDelete" onclick="deleteFloor()">삭제</button>
+      <button class="btn ghost" onclick="closeOverlay('shopItemOverlay')">취소</button>
+      <button class="btn primary" onclick="saveFloor()">저장</button>
+    </div>
+  </div>
+</div>
+<!-- 쇼핑: 매장 모달 -->
+<div class="overlay" id="shopBldOverlay">
+  <div class="sheet">
+    <h2 id="shopBldTitle">매장 추가</h2>
+    <div class="field"><label>매장 이름</label><input id="sbName" type="text"></div>
+    <div class="field"><label>부가 설명 (선택)</label><input id="sbSub" type="text" placeholder="위치·특징 등"></div>
+    <div class="sheet-actions">
+      <button class="btn danger" id="sbDelete" onclick="deleteBld()">삭제</button>
+      <button class="btn ghost" onclick="closeOverlay('shopBldOverlay')">취소</button>
+      <button class="btn primary" onclick="saveBld()">저장</button>
+    </div>
+  </div>
+</div>
+<!-- 쇼핑: 구역 모달 -->
+<div class="overlay" id="shopZoneOverlay">
+  <div class="sheet">
+    <h2>구역 수정</h2>
+    <div class="field"><label>제목</label><input id="szTitle" type="text"></div>
+    <div class="field"><label>부제</label><input id="szSub" type="text"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeOverlay('shopZoneOverlay')">취소</button>
+      <button class="btn primary" onclick="saveZone()">저장</button>
+    </div>
+  </div>
+</div>
+<!-- 쇼핑: 4원칙 모달 -->
+<div class="overlay" id="principlesOverlay">
+  <div class="sheet">
+    <h2>원칙 수정</h2>
+    <div class="field"><label>한 줄에 하나씩 (강조는 **텍스트**)</label><textarea id="prText" style="min-height:160px"></textarea></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeOverlay('principlesOverlay')">취소</button>
+      <button class="btn primary" onclick="savePrinciples()">저장</button>
+    </div>
+  </div>
+</div>
+<!-- 쇼핑: 무게필터 모달 -->
+<div class="overlay" id="weightOverlay">
+  <div class="sheet">
+    <h2>무게 필터 수정</h2>
+    <div class="field"><label>🔴 패스 후보</label><textarea id="wPass"></textarea></div>
+    <div class="field"><label>🟢 값어치 O</label><textarea id="wWorth"></textarea></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeOverlay('weightOverlay')">취소</button>
+      <button class="btn primary" onclick="saveWeight()">저장</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 기본 데이터 ================= */
+var DEFAULT = {
+  config:{
+    title:"후쿠오카 여행 스케줄표",
+    hotel:"더 베이직스 후쿠오카 (The Basics Fukuoka)",
+    flightOut:"7/17(금) 인천 18:05 → 후쿠오카 19:30",
+    flightIn:"7/20(월) 후쿠오카 12:30 → 인천",
+    startDate:"2026-07-17",
+    days:4,
+    startHour:6,
+    endHour:24
+  },
+  schedule:{
+    "1":[
+      {id:"a1",start:"19:30",end:"20:30",cat:"move",title:"후쿠오카공항 → 하카타",memo:"입국심사·수하물 → 지하철 공항선(공항→하카타 약 5분)",map:"https://www.google.com/maps/dir/?api=1&origin=%E7%A6%8F%E5%B2%A1%E7%A9%BA%E6%B8%AF&destination=%E5%8D%9A%E5%A4%9A%E9%A7%85"},
+      {id:"a2",start:"20:30",end:"21:10",cat:"rest",title:"숙소 체크인 · 짐 정리",memo:"더 베이직스 후쿠오카",map:"https://www.google.com/maps/search/?api=1&query=The+Basics+Fukuoka"},
+      {id:"a3",start:"21:10",end:"21:30",cat:"move",title:"숙소 → 니쿠이치 하카타점",memo:"도보/택시 이동",map:"https://www.google.com/maps/dir/?api=1&origin=%E3%82%B6%E3%83%BB%E3%83%99%E3%83%BC%E3%82%B7%E3%83%83%E3%82%AF%E3%82%B9%E7%A6%8F%E5%B2%A1&destination=%E3%81%AB%E3%81%8F%E5%B1%8B%20%E8%82%89%E3%81%84%E3%81%A1%20%E5%8D%9A%E5%A4%9A%E5%BA%97"},
+      {id:"a4",start:"21:30",end:"23:00",cat:"food",title:"🥩 니쿠이치 하카타점 (예약)",memo:"★ 21:30 예약 완료 · 야키니쿠 | 🍽 추천: 와규 모둠구이·특상 갈비/로스·유케",map:"https://www.google.com/maps/search/?api=1&query=肉一+博多店"},
+      {id:"a5",start:"23:00",end:"23:10",cat:"move",title:"니쿠이치 → 나카스 돈키호테",memo:"택시 약 10분 or 지하철(하카타역→나카스카와바타 1정거장) · 도보는 멀어서 비추천",map:"https://www.google.com/maps/dir/?api=1&origin=%E3%81%AB%E3%81%8F%E5%B1%8B%20%E8%82%89%E3%81%84%E3%81%A1%20%E5%8D%9A%E5%A4%9A%E5%BA%97&destination=%E3%83%89%E3%83%B3%E3%83%BB%E3%82%AD%E3%83%9B%E3%83%BC%E3%83%86%E4%B8%AD%E6%B4%B2%E5%BA%97"},
+      {id:"a6",start:"23:10",end:"23:50",cat:"plan",title:"🛒 돈키호테 나카스점 (24h · 가볍게)",memo:"24시간 영업 · 숙소까지 택시 10분/지하철 15분(도보는 32분이라 비추천) · 첫날은 가볍게 · 산테21·비오레 등은 3일차 텐진 돈키에서 몰아서 · 아이 컨디션 봐서 짧게",map:"https://www.google.com/maps/search/?api=1&query=ドンキホーテ+中洲店"},
+      {id:"a7",start:"23:50",end:"24:00",cat:"move",title:"돈키호테 → 숙소 (택시 10분/지하철 15분)",memo:"",map:"https://www.google.com/maps/dir/?api=1&origin=%E3%83%89%E3%83%B3%E3%83%BB%E3%82%AD%E3%83%9B%E3%83%BC%E3%83%86%E4%B8%AD%E6%B4%B2%E5%BA%97&destination=%E3%82%B6%E3%83%BB%E3%83%99%E3%83%BC%E3%82%B7%E3%83%83%E3%82%AF%E3%82%B9%E7%A6%8F%E5%B2%A1"}
+    ],
+    "2":[
+      {id:"b1",start:"07:30",end:"08:20",cat:"food",title:"🥐 다코메카(DACOMECCA) 아침",memo:"★ 하카타역 博多口 도보 3분 · 07:00 오픈 · 아맘다코탄 자매점 빵맛집 | 🍽 추천: 명란프랑스 모닝플레이트(수량한정, 일찍!)·크루아상·아이용 달콤한 빵·커피",map:"https://www.google.com/maps/search/?api=1&query=DACOMECCA+博多"},
+      {id:"b2",start:"08:20",end:"08:45",cat:"move",title:"스타벅스 원모어커피 → 난조인 출발",memo:"스타벅스에서 원모어커피 받아 하카타역으로",map:"https://www.google.com/maps/search/?api=1&query=スターバックス+博多駅"},
+      {id:"b3",start:"08:45",end:"09:15",cat:"move",title:"하카타 → 城戸南蔵院前역",memo:"JR사사구리선 약 25~30분, 하차 후 도보 3분",map:"https://www.google.com/maps/dir/?api=1&origin=%E5%8D%9A%E5%A4%9A%E9%A7%85&destination=%E5%9F%8E%E6%88%B8%E5%8D%97%E8%94%B5%E9%99%A2%E5%89%8D%E9%A7%85"},
+      {id:"b4",start:"09:15",end:"11:15",cat:"plan",title:"난조인(南蔵院) 열반상·경내 (2시간)",memo:"세계최대 청동 열반상 41m(아이들도 좋아함) · 체내참배 500엔 · 500나한상 · 아이 지치지 않게 2시간 내로",map:"https://www.google.com/maps/search/?api=1&query=南蔵院"},
+      {id:"b5",start:"11:15",end:"11:50",cat:"move",title:"난조인 → 하카타 복귀",memo:"JR 약 25~30분",map:"https://www.google.com/maps/dir/?api=1&origin=%E5%9F%8E%E6%88%B8%E5%8D%97%E8%94%B5%E9%99%A2%E5%89%8D%E9%A7%85&destination=%E5%8D%9A%E5%A4%9A%E9%A7%85"},
+      {id:"b6",start:"11:50",end:"13:45",cat:"plan",title:"하카타역 쇼핑 (아뮤플라자·마루이·KITTE)",memo:"🛍 아뮤플라자: 도큐핸즈 5F(문구류) · 지하BB 식품관(주방 집게·칼·나무젓가락·시오콘부) · 러쉬(면세) · 아이나가라 눈마사지기 · KITTE하카타 · 마루이 · 버스터미널 다이소 | 온러닝 백업: 博多阪急 엠미4F/라쿠호도8F · ※어른 매장은 짧게, 아이 지루하지 않게",map:"https://www.google.com/maps/search/?api=1&query=アミュプラザ博多"},
+      {id:"b7",start:"14:00",end:"15:15",cat:"food",title:"🍣 사시스 킷테하카타점 (점심)",memo:"★ KITTE博多 B1F · 예약X · 점심 2시대 여유 | 🍽 추천: 복어스시·생새우육회·참치대뱃살 김밥·계란찜·스시 (우니는 패스)",map:"https://www.google.com/maps/search/?api=1&query=すし酒場さしす+KITTE博多"},
+      {id:"b8",start:"15:15",end:"15:45",cat:"food",title:"🍡 이몬네 하카타 (모찌아이스크림 디저트)",memo:"★ 博多マルイ 1F · 10:00~21:00 · 얇은 모찌+젤라토 | 🍽 추천: 2단 모찌아이스크림(790엔~)",map:"https://www.google.com/maps/search/?api=1&query=いもんね+博多マルイ"},
+      {id:"b9",start:"15:45",end:"16:20",cat:"move",title:"하카타 → 라라포트 후쿠오카",memo:"JR 다케시타(竹下)역 하차 도보 10분 or 하카타 버스터미널 13번 승강장 버스 약 20분",map:"https://www.google.com/maps/dir/?api=1&origin=%E5%8D%9A%E5%A4%9A%E9%A7%85&destination=%E3%82%89%E3%82%89%E3%81%BD%E3%83%BC%E3%81%A8%E7%A6%8F%E5%B2%A1"},
+      {id:"b10",start:"16:20",end:"19:00",cat:"plan",title:"라라포트 후쿠오카 (쇼핑 + 실물대 ν건담)",memo:"🤖 아이들 하이라이트! 4F 건담파크(프라모델·굿즈)·낮 연출 매시 정각 | 🏬 220개 매장 — 1F 무인양품·레고샵·3coins / 2F 유니클로·자라·뉴발란스·로프트 / 3F ABC마트·점프샵",map:"https://www.google.com/maps/search/?api=1&query=ららぽーと福岡+ガンダム"},
+      {id:"b11",start:"19:00",end:"19:35",cat:"plan",title:"🤖 ν건담 야간 라이트쇼 관람 (19:00 회차)",memo:"★ 벽면영상+음악 연출 · 19:00 회차 관람(19:00·19:30·20:00·20:30·21:00 중) · 아이들 강추",map:"https://www.google.com/maps/search/?api=1&query=ららぽーと福岡+ガンダム"},
+      {id:"b12",start:"19:35",end:"20:15",cat:"move",title:"라라포트 → 하카타",memo:"버스/택시 약 20~25분 · 숙소·이치타카 모두 하카타역 부근",map:"https://www.google.com/maps/dir/?api=1&origin=%E3%82%89%E3%82%89%E3%81%BD%E3%83%BC%E3%81%A8%E7%A6%8F%E5%B2%A1&destination=%E5%8D%9A%E5%A4%9A%E9%A7%85"},
+      {id:"b13",start:"20:15",end:"21:30",cat:"food",title:"🍲 이치타카 모츠나베 (하카타, 저녁)",memo:"★ 하카타역 치쿠시출구 도보 3분 · 숙소 가까워 부담 적음 | 🍽 추천: 미소 모츠나베·명란계란말이·말고기 사시미·시메 짱뽕사리",map:"https://www.google.com/maps/search/?api=1&query=もつ鍋+一高+博多本店"},
+      {id:"b14",start:"21:30",end:"21:50",cat:"rest",title:"숙소 복귀 · 휴식",memo:"이른 취침으로 다음날 컨디션 관리",map:""}
+    ],
+    "3":[
+      {id:"c1",start:"08:00",end:"08:25",cat:"move",title:"숙소 → 텐진 (택시 한번에)",memo:"짐 없이 택시로 텐진까지 한 번에 · 솔라리아 스테이지행",map:"https://www.google.com/maps/dir/?api=1&origin=%E3%82%B6%E3%83%BB%E3%83%99%E3%83%BC%E3%82%B7%E3%83%83%E3%82%AF%E3%82%B9%E7%A6%8F%E5%B2%A1&destination=%E3%82%BD%E3%83%A9%E3%83%AA%E3%82%A2%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%20%E7%A6%8F%E5%B2%A1"},
+      {id:"c1b",start:"08:25",end:"09:25",cat:"food",title:"🍚 키스이마루 텐진점 아침",memo:"★ 솔라리아 스테이지 B2F · 07:30~22:30 · 명란 무제한 | 🍽 추천: 오징어 명란젓 무한리필 정식·고등어구이 정식·사시미 정식 (바로 위 4F 인큐브 연계)",map:"https://www.google.com/maps/search/?api=1&query=喜水丸+天神店"},
+      {id:"c3",start:"10:00",end:"12:30",cat:"plan",title:"텐진 지하상가·쇼핑",memo:"🛍 텐진 지하상가 이모야켄지로(고구마튀김)+주방용품상가+맞은편 칼디 · 솔라리아 스테이지 4F 인큐브(몬치치) · 미나텐진 1F 유니클로 · 다이소 · 스탠다드프로덕트(보냉백) · 러쉬(파르코 5F) · 텐진 돈키호테(산테21 안약 등)",map:"https://www.google.com/maps/search/?api=1&query=天神地下街"},
+      {id:"c4",start:"12:30",end:"13:45",cat:"food",title:"🥩 하카타규 마부시 무사시 텐진점 (점심)",memo:"★ 흑모와규 규마부시(소고기 히츠마부시) · 텐진점(이마이즈미) 11:00~15:00(L.O.14:30)/17:30~22:00 · ⏰브레이크타임 15:00~17:30(오후 3~5시경) → 점심은 14:30 전 입장 · 웨이팅 있는 편이라 일찍 | 🍽 추천: 와규 마부시(①첫입 그대로 ②양념·와사비 ③다시 부어 오차즈케)",map:"https://www.google.com/maps/search/?api=1&query=博多牛まぶし+武蔵+天神店"},
+      {id:"c5",start:"14:15",end:"17:00",cat:"plan",title:"캐널시티 하카타",memo:"👟 온러닝 운동화 → 스포츠데포 플래그십(Alpen FUKUOKA, 2~3F): ON 숍인숍 있어 물량·사이즈 제일 많음(서일본 최대급) · 무라사키스포츠(오파 3F)는 백업 · 🤖 건담베이스 후쿠오카 · 반다이남코(가챠·룩업) · 점프샵 · 맥스밸류 익스프레스24",map:"https://www.google.com/maps/search/?api=1&query=キャナルシティ博多"},
+      {id:"c6",start:"17:00",end:"18:15",cat:"food",title:"🍜 저녁 (캐널시티 라멘스타디움/푸드코트)",memo:"미야지다케 출발 전 저녁 · 취향껏 | 🍽 라멘스타디움 5개 유명 라멘집 중 택1 (아이 우동/카레도 있음)",map:"https://www.google.com/maps/search/?api=1&query=キャナルシティ博多+ラーメンスタジアム"},
+      {id:"c7",start:"18:30",end:"19:10",cat:"move",title:"캐널/하카타역 → JR후쿠마역",memo:"하카타역서 JR가고시마본선 약 25분",map:"https://www.google.com/maps/dir/?api=1&origin=%E5%8D%9A%E5%A4%9A%E9%A7%85&destination=%E7%A6%8F%E9%96%93%E9%A7%85"},
+      {id:"c8",start:"19:10",end:"19:30",cat:"move",title:"후쿠마역 → 미야지다케 신사",memo:"택시 약 5분(900~1,000엔) · 버스 210엔",map:"https://www.google.com/maps/dir/?api=1&origin=%E7%A6%8F%E9%96%93%E9%A7%85&destination=%E5%AE%AE%E5%9C%B0%E5%B6%BD%E7%A5%9E%E7%A4%BE"},
+      {id:"c9",start:"19:30",end:"20:30",cat:"plan",title:"미야지다케 신사 라이트업 (짧게)",memo:"풍린 회랑 + 20:00 라이트업 점등 감상 후 20:30 출발 · ※일요일이라 야시장(금·토)은 없음 · 아이 컨디션·다음날 출국 고려해 짧게",map:"https://www.google.com/maps/search/?api=1&query=宮地嶽神社"},
+      {id:"c10",start:"20:30",end:"20:50",cat:"move",title:"신사 → 후쿠마역 (택시)",memo:"미리 택시 호출 추천(후쿠에이택시 0940-42-0373)",map:"https://www.google.com/maps/dir/?api=1&origin=%E5%AE%AE%E5%9C%B0%E5%B6%BD%E7%A5%9E%E7%A4%BE&destination=%E7%A6%8F%E9%96%93%E9%A7%85"},
+      {id:"c11",start:"20:50",end:"21:45",cat:"move",title:"후쿠마역 → 하카타 → 숙소",memo:"JR 약 25분 · 내일 출국 대비 짐 정리 후 취침",map:"https://www.google.com/maps/dir/?api=1&origin=%E7%A6%8F%E9%96%93%E9%A7%85&destination=%E5%8D%9A%E5%A4%9A%E9%A7%85"}
+    ],
+    "4":[
+      {id:"d1",start:"07:40",end:"08:20",cat:"rest",title:"체크아웃 · 짐 정리",memo:"짐 최종 점검",map:""},
+      {id:"d1b",start:"08:20",end:"09:15",cat:"food",title:"🐮 탄야 HAKATA 아침 (규탄정식)",memo:"★ 하카타역 안(하카타 1번가) · 07:00 오픈 · 하카타역 → 공항 동선 편함 | 🍽 추천: 규탄정식(소혀구이+보리밥+토로로), 규탄 스지조림",map:"https://www.google.com/maps/search/?api=1&query=たんやHAKATA+博多駅"},
+      {id:"d2",start:"09:15",end:"10:00",cat:"move",title:"하카타역 → 후쿠오카공항",memo:"지하철 하카타→공항 약 5분",map:"https://www.google.com/maps/dir/?api=1&origin=%E5%8D%9A%E5%A4%9A%E9%A7%85&destination=%E7%A6%8F%E5%B2%A1%E7%A9%BA%E6%B8%AF"},
+      {id:"d3",start:"10:00",end:"12:30",cat:"plan",title:"공항 수속 · 면세 (출발 2시간 전 도착)",memo:"국제선 2시간 전 도착 권장",map:"https://www.google.com/maps/search/?api=1&query=福岡空港+国際線ターミナル"},
+      {id:"d4",start:"12:30",end:"14:00",cat:"move",title:"후쿠오카 12:30 → 인천 출발",memo:"오는 편",map:""}
+    ]
+  },
+  shopping:{
+    principles:[
+      "**돈키호테는 1일차 밤 나카스점에서 몰아서** — 3일차 텐진 돈키는 그때 못 산 것만. 두 번 겹치지 말기.",
+      "**러쉬는 아뮤에스트 1층 한 곳에서** — 2일차 하카타 쇼핑 때 5,500엔↑ 몰아 사고 면세. 텐진 파르코는 예비.",
+      "**온러닝은 캐널시티 알펜 2층** — 서일본 최대 스포츠매장, On 물량 제일 많음. 3일차 확정.",
+      "**칼디·다이소는 텐진에서** 한 번에. 아이나가라는 돈키 아니라 **아뮤 핸즈 5층**."
+    ],
+    zones:[
+      {id:"z1",color:"d1",title:"DAY 1 · 7/17(금) 밤",sub:"23:00 돈키호테 나카스점 (가볍게)",buildings:[
+        {id:"z1b1",name:"돈키호테 나카스점",sub:"24시간 · 나카스카와바타역 인근 · 숙소 도보 10분",floors:[
+          {id:"sf1",fl:"밤",items:"가벼운 소모품 먼저: **산테 안약** · **비오레**(입욕제·데오드란트) · 아이 간식",note:"여기서 미리 털면 3일차 텐진 돈키 부담↓ · 면세 5,500엔↑·여권 지참"},
+          {id:"sf2",fl:"보류",items:"부피 큰 소모품은 마지막(3일차 텐진 돈키)로",note:"여행 내내 안 들고 다니게"}
+        ]}
+      ]},
+      {id:"z2",color:"d2",title:"DAY 2 · 7/18(토)",sub:"하카타역 쇼핑(11:50~14:00) → 라라포트",buildings:[
+        {id:"z2b1",name:"아뮤플라자 하카타",sub:"JR하카타역 직결",floors:[
+          {id:"sf3",fl:"B1",items:"지하 식품관 → 주방 **집게·칼·나무젓가락** · **시오콘부**",note:""},
+          {id:"sf4",fl:"5F",items:"도큐핸즈 → **문구류** + **아이나가라 눈마사지기**",note:"아이나가라는 핸즈 선행발매(돈키 없음) · 재고 전화확인 추천"}
+        ]},
+        {id:"z2b2",name:"아뮤에스트",sub:"아뮤플라자 옆 · 하카타역 직결",floors:[
+          {id:"sf5",fl:"1F",items:"⭐ **러쉬**(직영·면세 O) — 마사지바 트루로맨스",note:"여기서 5,500엔↑ 몰아 사면 러쉬 끝 · 텐진보다 덜 붐빔"}
+        ]},
+        {id:"z2b3",name:"라라포트 후쿠오카",sub:"오후 · 가족·아이 위주",floors:[
+          {id:"sf6",fl:"4F",items:"건담파크 · 실물대 ν건담(19시 라이트쇼)",note:""},
+          {id:"sf7",fl:"관내",items:"무인양품 · 레고 · 유니클로 · 자라 · ABC마트",note:"쇼핑리스트 핵심템은 여기 없음 — 아이·가족 쇼핑"}
+        ]}
+      ]},
+      {id:"z3",color:"d3",title:"DAY 3 · 7/19(일)",sub:"텐진(10:00~) → 캐널시티(14:15~)",buildings:[
+        {id:"z3b1",name:"텐진 지하상가",sub:"지하로 다 연결",floors:[
+          {id:"sf8",fl:"B1",items:"이모야켄지로(고구마튀김) · **칼디**(커피·시오콘부·간식) · 주방용품 상가 · 인큐브(몬치치) · 유니클로 · **다이소**",note:"칼디·다이소는 여기서 몰아서"}
+        ]},
+        {id:"z3b2",name:"라시크 LACHIC",sub:"니시테츠 텐진역 인근",floors:[
+          {id:"sf9",fl:"9F",items:"스탠다드 프로덕트 → **보냉백**",note:"부피 큼 — 정말 필요할 때만"}
+        ]},
+        {id:"z3b3",name:"파르코 / 텐진 돈키호테",sub:"",floors:[
+          {id:"sf10",fl:"파르코 5F",items:"러쉬 (하카타서 못 샀을 때 예비)",note:""},
+          {id:"sf11",fl:"돈키",items:"1일차 나카스서 **못 산 것만**",note:"중복 방문 최소화"}
+        ]},
+        {id:"z3b4",name:"캐널시티 하카타",sub:"텐진에서 버스·지하철 약 10분",floors:[
+          {id:"sf12",fl:"알펜 2F",items:"스포츠데포(Alpen) → **온러닝(On)**",note:"서일본 최대·On 물량 최다 · 2층 러닝코너"},
+          {id:"sf13",fl:"S1F",items:"건담베이스 후쿠오카",note:""},
+          {id:"sf14",fl:"B1",items:"점프샵 · 반다이남코(가챠)",note:"아이들 구경"}
+        ]}
+      ]},
+      {id:"z4",color:"d4",title:"DAY 4 · 7/20(월) 출국",sub:"10:00 공항 면세가 마지막 기회",buildings:[
+        {id:"z4b1",name:"후쿠오카공항",sub:"출발 12:30 · 2시간 전 수속",floors:[
+          {id:"sf15",fl:"면세",items:"깜빡한 간식·화장품 마지막 픽업",note:"부피 큰 쇼핑은 전날 마무리 권장"}
+        ]}
+      ]},
+      {id:"z5",color:"kw",title:"🍳 일본 주방용품 더 볼 곳 (선택)",sub:"3일차 텐진 동선에서 살짝",buildings:[
+        {id:"z5b1",name:"B.B.B POTTERS",sub:"텐진 도보 10~15분 / 야쿠인",floors:[
+          {id:"sf16",fl:"추천",items:"⭐ 후쿠오카 대표 **감성 주방·생활잡화 편집숍**",note:"예쁜 나무주걱·조리도구·그릇 · 가벼운 소품 위주"}
+        ]},
+        {id:"z5b2",name:"다이마루 후쿠오카 텐진점",sub:"",floors:[
+          {id:"sf17",fl:"본관 6F",items:"냄비·프라이팬·**식칼**·유명 키친 브랜드",note:"백화점 면세 O · 식칼은 위탁수하물"}
+        ]}
+      ]}
+    ],
+    weightPass:"보냉백(한국 다이소도 비슷) · 저가 주방칼·집게",
+    weightWorth:"러쉬(한국 대비 ~반값) · 산테 안약(초경량) · 비오레 · 아이나가라(일본한정) · 핸즈 문구 · 칼디 식품 · 온러닝(살 거면 알펜)"
+  }
+};
+
+/* ================= 상태 & 저장 ================= */
+var STORE_KEY="fukuoka_schedule_v1";
+var state=load();
+var view="grid";
+var editing={day:null,id:null,cat:"plan"};
+var ticketField=null;
+
+function load(){
+  try{
+    var s=localStorage.getItem(STORE_KEY);
+    if(s){var p=JSON.parse(s); if(!p.shopping){p.shopping=JSON.parse(JSON.stringify(DEFAULT.shopping));} return p;}
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT));
+}
+function save(){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(state));}catch(e){}
+}
+
+/* ================= 유틸 ================= */
+var DOW=["일","월","화","수","목","금","토"];
+function toMin(t){var p=t.split(":");return (+p[0])*60+(+p[1]);}
+function dateForDay(i){ // i:1-base
+  var d=new Date(state.config.startDate+"T00:00:00");
+  d.setDate(d.getDate()+(i-1));
+  return d;
+}
+function fmtDate(d){return (d.getMonth()+1)+"/"+d.getDate();}
+function catClass(c){return "cat-"+c;}
+function catName(c){return {plan:"일정",food:"식사",move:"이동",rest:"휴식"}[c];}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function uid(){return "x"+Date.now()+Math.floor(Math.random()*1000);}
+
+/* ================= 헤더 렌더 ================= */
+function renderHeader(){
+  var c=state.config;
+  document.getElementById("tkTitle").textContent=c.title;
+  document.getElementById("tkHotel").textContent=c.hotel;
+  document.getElementById("tkOut").textContent=c.flightOut;
+  document.getElementById("tkIn").textContent=c.flightIn;
+  var s=dateForDay(1), e=dateForDay(c.days);
+  document.getElementById("tkSub").textContent=
+    s.getFullYear()+"."+pad(s.getMonth()+1)+"."+pad(s.getDate())+"("+DOW[s.getDay()]+") ~ "+
+    pad(e.getMonth()+1)+"."+pad(e.getDate())+"("+DOW[e.getDay()]+") · "+(c.days-1)+"박 "+c.days+"일";
+}
+function pad(n){return (n<10?"0":"")+n;}
+
+/* ================= 타임라인 그리드 ================= */
+function renderGrid(){
+  var c=state.config, sH=c.startHour, eH=c.endHour, hourH=parseFloat(getVar("--hour-h"));
+  // 헤더
+  var head='<div class="corner"></div>';
+  for(var i=1;i<=c.days;i++){
+    var d=dateForDay(i);
+    head+='<div class="dh"><div class="d1">DAY '+i+'</div><div class="d2">'+fmtDate(d)+" ("+DOW[d.getDay()]+")</div></div>";
+  }
+  document.getElementById("dayHead").innerHTML=head;
+
+  // 시간축
+  var axis='<div class="axis">';
+  for(var h=sH;h<eH;h++){axis+='<div class="hr"><span>'+pad(h)+"</span></div>";}
+  axis+="</div>";
+
+  // 컬럼
+  var body=axis;
+  for(var day=1;day<=c.days;day++){
+    body+='<div class="col" data-day="'+day+'">';
+    for(var h2=sH;h2<eH;h2++){body+='<div class="hline"></div>';}
+    // 추가용 히트영역(1시간 간격)
+    for(var h3=sH;h3<eH;h3++){
+      var top=(h3-sH)*hourH;
+      body+='<div class="addcell" data-day="'+day+'" data-hour="'+h3+'" style="top:'+top+'px;height:'+hourH+'px;"></div>';
+    }
+    // 블록
+    var items=(state.schedule[day]||[]);
+    for(var k=0;k<items.length;k++){
+      var b=items[k];
+      var st=Math.max(toMin(b.start),sH*60), en=Math.min(toMin(b.end),eH*60);
+      var top2=((st-sH*60)/60)*hourH;
+      var hgt=Math.max(((en-st)/60)*hourH,26);
+      var mapBtn=b.map?'<a class="bmap" href="'+esc(b.map)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 지도</a>':"";
+      var memo=b.memo?'<div class="bmemo">'+esc(b.memo)+"</div>":"";
+      body+='<div class="block '+catClass(b.cat)+'" style="top:'+top2+'px;height:'+hgt+'px;" '+
+        'data-day="'+day+'" data-id="'+b.id+'">'+
+        '<div class="btime">'+b.start+"–"+b.end+"</div>"+
+        '<div class="bt">'+esc(b.title)+"</div>"+memo+mapBtn+"</div>";
+    }
+    body+="</div>";
+  }
+  document.getElementById("gridBody").innerHTML=body;
+
+  // 이벤트: 블록 클릭
+  var blocks=document.querySelectorAll("#gridBody .block");
+  blocks.forEach(function(el){
+    el.addEventListener("click",function(ev){
+      if(ev.target.classList.contains("bmap"))return;
+      openBlock(this.getAttribute("data-day"),this.getAttribute("data-id"));
+    });
+  });
+  // 이벤트: 빈칸 클릭
+  var cells=document.querySelectorAll("#gridBody .addcell");
+  cells.forEach(function(el){
+    el.addEventListener("click",function(){
+      var day=this.getAttribute("data-day"), hour=+this.getAttribute("data-hour");
+      openBlock(day,null,hour);
+    });
+  });
+}
+function getVar(name){return getComputedStyle(document.documentElement).getPropertyValue(name);}
+
+/* ================= 리스트 뷰 ================= */
+function renderList(){
+  var c=state.config, html="";
+  for(var day=1;day<=c.days;day++){
+    var d=dateForDay(day);
+    var items=(state.schedule[day]||[]).slice().sort(function(a,b){return toMin(a.start)-toMin(b.start);});
+    html+='<div class="day-card"><h3>DAY '+day+' <span class="badge">'+fmtDate(d)+" ("+DOW[d.getDay()]+")</span></h3>";
+    if(!items.length){html+='<div class="lmemo" style="padding:8px 0;color:var(--muted)">일정이 없어요. 타임라인에서 추가해 보세요.</div>';}
+    for(var k=0;k<items.length;k++){
+      var b=items[k];
+      var mapBtn=b.map?'<a class="lmap" href="'+esc(b.map)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 지도 열기</a>':"";
+      var memo=b.memo?'<div class="lmemo">'+esc(b.memo)+"</div>":"";
+      var color="var(--"+b.cat+"-fg)";
+      html+='<div class="litem" data-day="'+day+'" data-id="'+b.id+'">'+
+        '<div class="lt">'+b.start+"<br>~"+b.end+"</div>"+
+        '<div class="lc"><div class="ltitle"><span class="ltag" style="background:'+color+'"></span>'+esc(b.title)+"</div>"+
+        memo+mapBtn+"</div></div>";
+    }
+    html+="</div>";
+  }
+  document.getElementById("listView").innerHTML=html;
+  document.querySelectorAll("#listView .litem").forEach(function(el){
+    el.addEventListener("click",function(ev){
+      if(ev.target.classList.contains("lmap"))return;
+      openBlock(this.getAttribute("data-day"),this.getAttribute("data-id"));
+    });
+  });
+}
+
+/* ================= 렌더 총괄 ================= */
+function renderAll(){renderHeader();renderGrid();renderList();renderShop();}
+
+/* ================= 쇼핑 가이드 (편집 가능) ================= */
+var shopEdit={zoneId:null,bldId:null,floorId:null};
+function mdBold(s){return esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");}
+function findZone(id){return state.shopping.zones.filter(function(z){return z.id===id;})[0];}
+function findBld(zid,bid){var z=findZone(zid);return z?z.buildings.filter(function(b){return b.id===bid;})[0]:null;}
+function findFloor(zid,bid,fid){var b=findBld(zid,bid);return b?b.floors.filter(function(f){return f.id===fid;})[0]:null;}
+
+function renderShop(){
+  var sh=state.shopping; if(!sh){return;}
+  var h='<div class="sg-tip" onclick="editPrinciples()"><h3>⏱️ 시간 안 버리는 4원칙 <span class="sg-ed">✎ 탭하여 수정</span></h3><ul>';
+  sh.principles.forEach(function(p){h+="<li>"+mdBold(p)+"</li>";});
+  h+="</ul></div>";
+  sh.zones.forEach(function(z){
+    h+='<section class="sg-zone sg-'+z.color+'">';
+    h+='<div class="sg-head" onclick="editZone(\''+z.id+'\')"><h2>'+esc(z.title)+'</h2><div class="sub">'+esc(z.sub)+' ✎</div></div>';
+    h+='<div class="sg-body">';
+    z.buildings.forEach(function(b){
+      h+='<div class="sg-bld">';
+      h+='<div class="sg-bname" onclick="editBld(\''+z.id+'\',\''+b.id+'\')">'+esc(b.name)+(b.sub?' <small>'+esc(b.sub)+'</small>':'')+' <span class="sg-ed">✎</span></div>';
+      b.floors.forEach(function(f){
+        h+='<div class="sg-floor" onclick="editFloor(\''+z.id+'\',\''+b.id+'\',\''+f.id+'\')"><div class="sg-fl">'+esc(f.fl)+'</div><div class="sg-items">'+mdBold(f.items)+(f.note?'<div class="sg-note">'+esc(f.note)+'</div>':'')+'</div></div>';
+      });
+      h+='<div class="sg-floor sg-addrow" onclick="addFloor(\''+z.id+'\',\''+b.id+'\')">＋ 항목 추가</div>';
+      h+='</div>';
+    });
+    h+='<button class="sg-addbld" onclick="addBld(\''+z.id+'\')">＋ 매장 추가</button>';
+    h+='</div></section>';
+  });
+  h+='<div class="sg-tip fix" onclick="editWeight()"><h3>⚖️ 무겁고 가격차 작은 건 패스 <span class="sg-ed">✎ 탭하여 수정</span></h3><ul>';
+  h+='<li>🔴 <b>패스 후보</b> — '+mdBold(sh.weightPass)+'</li>';
+  h+='<li>🟢 <b>값어치 O</b> — '+mdBold(sh.weightWorth)+'</li></ul></div>';
+  document.getElementById("shopView").innerHTML=h;
+}
+
+function editFloor(zid,bid,fid){
+  shopEdit={zoneId:zid,bldId:bid,floorId:fid};
+  var f=findFloor(zid,bid,fid);
+  document.getElementById("shopItemTitle").textContent="항목 수정";
+  document.getElementById("siDelete").style.display="block";
+  document.getElementById("siFl").value=f.fl;
+  document.getElementById("siItems").value=f.items;
+  document.getElementById("siNote").value=f.note||"";
+  openOverlay("shopItemOverlay");
+}
+function addFloor(zid,bid){
+  shopEdit={zoneId:zid,bldId:bid,floorId:null};
+  document.getElementById("shopItemTitle").textContent="항목 추가";
+  document.getElementById("siDelete").style.display="none";
+  document.getElementById("siFl").value="";
+  document.getElementById("siItems").value="";
+  document.getElementById("siNote").value="";
+  openOverlay("shopItemOverlay");
+}
+function saveFloor(){
+  var items=document.getElementById("siItems").value.trim();
+  if(!items){toast("항목을 입력해 주세요");return;}
+  var data={fl:document.getElementById("siFl").value.trim(),items:items,note:document.getElementById("siNote").value.trim()};
+  if(shopEdit.floorId){Object.assign(findFloor(shopEdit.zoneId,shopEdit.bldId,shopEdit.floorId),data);}
+  else{data.id=uid();findBld(shopEdit.zoneId,shopEdit.bldId).floors.push(data);}
+  save();renderShop();closeOverlay("shopItemOverlay");toast("저장했어요 ✓");
+}
+function deleteFloor(){
+  if(!shopEdit.floorId)return;
+  if(!confirm("이 항목을 삭제할까요?"))return;
+  var b=findBld(shopEdit.zoneId,shopEdit.bldId);
+  b.floors=b.floors.filter(function(x){return x.id!==shopEdit.floorId;});
+  save();renderShop();closeOverlay("shopItemOverlay");toast("삭제했어요");
+}
+function editBld(zid,bid){
+  shopEdit={zoneId:zid,bldId:bid,floorId:null};
+  var b=findBld(zid,bid);
+  document.getElementById("shopBldTitle").textContent="매장 수정";
+  document.getElementById("sbDelete").style.display="block";
+  document.getElementById("sbName").value=b.name;
+  document.getElementById("sbSub").value=b.sub||"";
+  openOverlay("shopBldOverlay");
+}
+function addBld(zid){
+  shopEdit={zoneId:zid,bldId:null,floorId:null};
+  document.getElementById("shopBldTitle").textContent="매장 추가";
+  document.getElementById("sbDelete").style.display="none";
+  document.getElementById("sbName").value="";
+  document.getElementById("sbSub").value="";
+  openOverlay("shopBldOverlay");
+}
+function saveBld(){
+  var name=document.getElementById("sbName").value.trim();
+  if(!name){toast("매장 이름을 입력해 주세요");return;}
+  var sub=document.getElementById("sbSub").value.trim();
+  if(shopEdit.bldId){var b=findBld(shopEdit.zoneId,shopEdit.bldId);b.name=name;b.sub=sub;}
+  else{findZone(shopEdit.zoneId).buildings.push({id:uid(),name:name,sub:sub,floors:[]});}
+  save();renderShop();closeOverlay("shopBldOverlay");toast("저장했어요 ✓");
+}
+function deleteBld(){
+  if(!shopEdit.bldId)return;
+  if(!confirm("이 매장을 통째로 삭제할까요?"))return;
+  var z=findZone(shopEdit.zoneId);
+  z.buildings=z.buildings.filter(function(x){return x.id!==shopEdit.bldId;});
+  save();renderShop();closeOverlay("shopBldOverlay");toast("삭제했어요");
+}
+function editZone(zid){
+  shopEdit={zoneId:zid,bldId:null,floorId:null};
+  var z=findZone(zid);
+  document.getElementById("szTitle").value=z.title;
+  document.getElementById("szSub").value=z.sub||"";
+  openOverlay("shopZoneOverlay");
+}
+function saveZone(){
+  var z=findZone(shopEdit.zoneId);
+  z.title=document.getElementById("szTitle").value||z.title;
+  z.sub=document.getElementById("szSub").value;
+  save();renderShop();closeOverlay("shopZoneOverlay");toast("저장했어요 ✓");
+}
+function editPrinciples(){
+  document.getElementById("prText").value=state.shopping.principles.join("\n");
+  openOverlay("principlesOverlay");
+}
+function savePrinciples(){
+  state.shopping.principles=document.getElementById("prText").value.split("\n").map(function(x){return x.trim();}).filter(function(x){return x;});
+  save();renderShop();closeOverlay("principlesOverlay");toast("저장했어요 ✓");
+}
+function editWeight(){
+  document.getElementById("wPass").value=state.shopping.weightPass;
+  document.getElementById("wWorth").value=state.shopping.weightWorth;
+  openOverlay("weightOverlay");
+}
+function saveWeight(){
+  state.shopping.weightPass=document.getElementById("wPass").value.trim();
+  state.shopping.weightWorth=document.getElementById("wWorth").value.trim();
+  save();renderShop();closeOverlay("weightOverlay");toast("저장했어요 ✓");
+}
+
+function setView(v){
+  view=v;
+  document.getElementById("gridView").style.display=(v==="grid")?"block":"none";
+  document.getElementById("listView").style.display=(v==="list")?"block":"none";
+  document.getElementById("shopView").style.display=(v==="shop")?"block":"none";
+  document.getElementById("legend").style.display=(v==="shop")?"none":"flex";
+  document.getElementById("segGrid").classList.toggle("on",v==="grid");
+  document.getElementById("segList").classList.toggle("on",v==="list");
+  document.getElementById("segShop").classList.toggle("on",v==="shop");
+}
+
+/* ================= 블록 추가/수정 모달 ================= */
+function openBlock(day,id,hour){
+  editing.day=day; editing.id=id;
+  var title=document.getElementById("blockTitle");
+  var delBtn=document.getElementById("btnDelete");
+  if(id){
+    var b=findBlock(day,id);
+    title.textContent="일정 수정";
+    delBtn.style.display="block";
+    document.getElementById("fTitle").value=b.title;
+    document.getElementById("fStart").value=b.start;
+    document.getElementById("fEnd").value=b.end;
+    document.getElementById("fMemo").value=b.memo||"";
+    document.getElementById("fMap").value=b.map||"";
+    setCat(b.cat);
+  }else{
+    title.textContent="일정 추가";
+    delBtn.style.display="none";
+    document.getElementById("fTitle").value="";
+    var sh=(hour!=null)?pad(hour)+":00":"09:00";
+    var eh=(hour!=null)?pad(Math.min(hour+1,23))+":00":"10:00";
+    document.getElementById("fStart").value=sh;
+    document.getElementById("fEnd").value=eh;
+    document.getElementById("fMemo").value="";
+    document.getElementById("fMap").value="";
+    setCat("plan");
+  }
+  openOverlay("blockOverlay");
+}
+function setCat(c){
+  editing.cat=c;
+  document.querySelectorAll("#catPick button").forEach(function(btn){
+    btn.classList.toggle("sel",btn.getAttribute("data-cat")===c);
+  });
+}
+document.getElementById("catPick").addEventListener("click",function(e){
+  var b=e.target.closest("button"); if(b){setCat(b.getAttribute("data-cat"));}
+});
+
+function findBlock(day,id){
+  var arr=state.schedule[day]||[];
+  for(var i=0;i<arr.length;i++){if(arr[i].id===id)return arr[i];}
+  return null;
+}
+function saveBlock(){
+  var t=document.getElementById("fTitle").value.trim();
+  var st=document.getElementById("fStart").value;
+  var en=document.getElementById("fEnd").value;
+  if(!t){toast("제목을 입력해 주세요");return;}
+  if(!st||!en){toast("시간을 입력해 주세요");return;}
+  if(toMin(en)<=toMin(st)){toast("종료 시간이 시작보다 빨라요");return;}
+  var data={
+    title:t,start:st,end:en,cat:editing.cat,
+    memo:document.getElementById("fMemo").value.trim(),
+    map:document.getElementById("fMap").value.trim()
+  };
+  if(!state.schedule[editing.day])state.schedule[editing.day]=[];
+  if(editing.id){
+    var b=findBlock(editing.day,editing.id);
+    Object.assign(b,data);
+  }else{
+    data.id=uid();
+    state.schedule[editing.day].push(data);
+  }
+  state.schedule[editing.day].sort(function(a,b){return toMin(a.start)-toMin(b.start);});
+  save();renderAll();closeOverlay("blockOverlay");toast("저장했어요 ✓");
+}
+function deleteBlock(){
+  if(!editing.id)return;
+  if(!confirm("이 일정을 삭제할까요?"))return;
+  state.schedule[editing.day]=state.schedule[editing.day].filter(function(x){return x.id!==editing.id;});
+  save();renderAll();closeOverlay("blockOverlay");toast("삭제했어요");
+}
+
+/* ================= 티켓 수정 ================= */
+document.querySelectorAll(".tk-item").forEach(function(el){
+  el.addEventListener("click",function(){
+    ticketField=this.getAttribute("data-edit");
+    var labels={hotel:"숙소",flightOut:"가는 편",flightIn:"오는 편"};
+    document.getElementById("ticketH").textContent=labels[ticketField]+" 수정";
+    document.getElementById("ticketLabel").textContent=labels[ticketField];
+    document.getElementById("ticketInput").value=state.config[ticketField];
+    openOverlay("ticketOverlay");
+  });
+});
+function saveTicket(){
+  state.config[ticketField]=document.getElementById("ticketInput").value;
+  save();renderHeader();closeOverlay("ticketOverlay");toast("저장했어요 ✓");
+}
+
+/* ================= 여행 설정 ================= */
+function openSettings(){
+  var c=state.config;
+  document.getElementById("sTitle").value=c.title;
+  document.getElementById("sDate").value=c.startDate;
+  document.getElementById("sDays").value=c.days;
+  document.getElementById("sStart").value=c.startHour;
+  document.getElementById("sEnd").value=c.endHour;
+  openOverlay("settingsOverlay");
+}
+function saveSettings(){
+  var c=state.config;
+  c.title=document.getElementById("sTitle").value||c.title;
+  c.startDate=document.getElementById("sDate").value||c.startDate;
+  c.days=Math.max(1,Math.min(10,+document.getElementById("sDays").value||c.days));
+  var sh=+document.getElementById("sStart").value, eh=+document.getElementById("sEnd").value;
+  if(sh>=0&&sh<24)c.startHour=sh;
+  if(eh>sh&&eh<=24)c.endHour=eh;
+  save();renderAll();closeOverlay("settingsOverlay");toast("설정을 저장했어요 ✓");
+}
+
+/* ================= 초기화 ================= */
+function resetAll(){
+  if(!confirm("모든 편집 내용을 지우고 기본 일정으로 되돌릴까요?"))return;
+  state=JSON.parse(JSON.stringify(DEFAULT));
+  save();renderAll();setView(view);toast("기본 일정으로 복원했어요");
+}
+
+/* ================= 모달 공통 ================= */
+function openOverlay(id){document.getElementById(id).classList.add("on");}
+function closeOverlay(id){document.getElementById(id).classList.remove("on");}
+document.querySelectorAll(".overlay").forEach(function(ov){
+  ov.addEventListener("click",function(e){if(e.target===ov)ov.classList.remove("on");});
+});
+
+/* ================= 토스트 ================= */
+var toastT;
+function toast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show");},1800);
+}
+
+/* ================= 시작 ================= */
+renderAll();
+setView("grid");
+</script>
+</body>
+</html>
